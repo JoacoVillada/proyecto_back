@@ -108,25 +108,119 @@ export const auth = (req, res, next) => {
   });
 };
 
-//me de la lista de las materias de un alumno
-export const getMateriasbyDni = (req, res) => {
-  //vamos a simular el acceso a la base de datos para obtener la lista de materias que un alumno esta cursando
-  //obtener el dni de la request
-  const dni = req.payload;
-  console.log(dni);
-  //acceder a la base datos
-  const materias = [
-    { id: 1, nombre: "so2" },
-    { id: 2, nombre: "web" },
-    { id: 3, nombre: "arquitectura" },
-  ];
+// Crear materias
+export const createMateria = async (req, res) => {
+  try {
+    // establecer la conexion a la bd -> instanciando un objeto conexion
+    const cnn = await connect();
+    // obtener lo que envio el front
+    const { nombre_materia } = req.body;
 
-  return res.status(200).json(materias);
+    const materiaExist = await validate(
+      "nombre_materia",
+      nombre_materia,
+      "materia",
+      cnn
+    );
+
+    // validar la existencia de la materia
+    if (materiaExist)
+      return res.status(400).json({ message: "la materia ya existe" });
+
+    // insertar un registro a la base de datos -> materia
+    const [result] = await cnn.query(
+      "INSERT INTO materia (nombre_materia) VALUES (?)",
+      [nombre_materia]
+    );
+
+    if (result.affectedRows === 1) {
+      return res
+        .status(200)
+        .json({ message: "se creó la materia", success: true });
+    } else {
+      return res
+        .status(500)
+        .json({ message: "no se creó la materia", success: false });
+    }
+  } catch (error) {
+    return res.status(500).json({ message: error.message, success: false });
+  }
+};
+
+// Función para crear una nueva cursada
+export const createCursada = async (req, res) => {
+  try {
+    const { dni, id_m } = req.body;
+
+    // Validar si la cursada ya existe
+    const cursadaExist = await validateCursada(dni, id_m);
+    if (cursadaExist) {
+      return res.status(400).json({ message: "La cursada ya existe" });
+    }
+
+    // Insertar la nueva cursada en la base de datos
+    const cnn = await connect();
+    const [result] = await cnn.query(
+      "INSERT INTO cursar (dni, id_m) VALUES (?, ?)",
+      [dni, id_m]
+    );
+
+    if (result.affectedRows === 1) {
+      return res
+        .status(200)
+        .json({ message: "Se creó la cursada exitosamente", success: true });
+    } else {
+      return res
+        .status(500)
+        .json({ message: "No se pudo crear la cursada", success: false });
+    }
+  } catch (error) {
+    return res.status(500).json({ message: error.message, success: false });
+  }
+};
+
+// Función para validar si una cursada existe
+const validateCursada = async (dni, id_m) => {
+  const cnn = await connect();
+  const [result] = await cnn.query(
+    "SELECT * FROM cursar WHERE dni = ? AND id_m = ?",
+    [dni, id_m]
+  );
+  return result.length > 0;
 };
 
 //funciones privadas
 //funcion que devuelte el token
 const getToken = (payload) => {
-  const token = jwt.sign(payload, claveSecreta, { expiresIn: "1m" });
+  const token = jwt.sign(payload, claveSecreta, { expiresIn: "60m" });
   return token;
+};
+
+// getMateriaById: Devolver las materias que cursa un alumno determinado
+export const getMateriaById = async (req, res) => {
+  try {
+    const connection = await connect();
+    const { dni } = req.params;
+
+    // Verificar si el alumno existe
+    const [alumnoResult] = await connection.query(
+      "SELECT * FROM alumno WHERE dni = ?",
+      [dni]
+    );
+    if (alumnoResult.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "Alumno no encontrado", success: false });
+    }
+
+    // Obtener las materias que cursa el alumno
+    const [result] = await connection.query(
+      "SELECT m.id_m, m.nombre_materia FROM materia m INNER JOIN cursar c ON m.id_m = c.id_m WHERE c.dni = ?",
+      [dni]
+    );
+
+    return res.status(200).json(result);
+  } catch (error) {
+    return res.status(500).json({ message: error.message, success: false });
+  }
 };

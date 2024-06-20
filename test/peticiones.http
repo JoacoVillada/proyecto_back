@@ -1,6 +1,12 @@
 @usersp = http://localhost:3000/user/usersp
 @login = http://localhost:3000/user/login
 
+@createMateria = http://localhost:3000/materia/create
+
+@createCursada = http://localhost:3000/cursada/create
+
+@getMateriaById = http://localhost:3000/user/getMateriaById
+
 
 
 POST {{login}}
@@ -16,9 +22,29 @@ POST {{usersp}}
 Content-Type: application/json
 
 {
-    "dni" : "10",
-    "nombre" : "juan",
-    "password" : "1234"
+    "dni" : "46",
+    "nombre" : "joaco",
+    "password" : "46"
 }
 
-#body
+###
+POST {{createMateria}}
+Content-Type: application/json
+
+{
+    "nombre_materia" : "Sistemas Operativos"
+}
+
+###
+POST {{createCursada}}
+Content-Type: application/json
+
+{
+    "dni" : "10",
+    "id_m" : "3"
+}
+
+### Obtener materias por DNI (requiere autenticación)
+
+GET {{getMateriaById}}/46
+auth: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJkbmkiOiIxMCIsImlhdCI6MTcxODg0ODM1MywiZXhwIjoxNzE4ODUxOTUzfQ.dsY4wYjFOLkbhIpg60Mjfi4GzK-7fPn3zYxobGQqro4
